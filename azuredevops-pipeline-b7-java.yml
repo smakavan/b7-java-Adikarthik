@@ -6,7 +6,7 @@ pool:
 variables:
   registry: sacdockerzure.azurecr.io
   dockerHubUser: smakavan
-  Imagename: my-app:2.0
+  Imagename: my-app
   tag: $(Build.BuildId)
 
 steps:
