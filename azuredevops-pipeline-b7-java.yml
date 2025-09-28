@@ -1,0 +1,68 @@
+trigger: none
+
+pool:
+  name: 'Local-Linux'
+
+variables:
+  registry: sacdockerzure.azurecr.io
+  dockerHubUser: smakavan
+  Imagename: my-app:2.0
+  tag: $(Build.BuildId)
+
+steps:
+# Checkout code
+- checkout: self
+
+# ================= MAVEN BUILD =================
+- task: Maven@4
+  displayName: "Build JARs"
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'clean package -DskipTests'
+    
+# ================= ACR LOGIN =================
+
+# Login to ACR
+- task: Docker@2
+  displayName: "Login to ACR"
+  inputs:
+    command: login
+    containerRegistry: ACR-Connection
+
+# ================= Build Image and push to repo =================
+# Build image
+- task: Docker@2
+  displayName: "Build image"
+  inputs:
+    command: build
+    containerRegistry: ACR-Connection
+    repository: $(Imagename)
+    dockerfile: Dockerfile
+    buildContext: '.'
+    tags: |
+      $(tag)
+
+# Push to ACR
+- task: Docker@2
+  displayName: "Push image to ACR"
+  inputs:
+    command: push
+    containerRegistry: ACR-Connection
+    repository: $(Imagename)
+    tags: |
+      $(tag)
+
+# Tag for Docker Hub
+- script: |
+    docker tag $(registry)/$(Imagename):$(tag) $(dockerHubUser)/$(Imagename):$(tag)
+  displayName: "Tag for Docker Hub"
+
+# Push to Docker Hub
+- task: Docker@2
+  displayName: "Push image to Docker Hub"
+  inputs:
+    command: push
+    containerRegistry: DockerHub-Connection
+    repository: $(dockerHubUser)/$(Imagename)
+    tags: |
+      $(tag)
